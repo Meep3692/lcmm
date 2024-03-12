@@ -8,6 +8,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Base64;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Flow.Subscriber;
+import java.util.concurrent.Flow.Subscription;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -58,7 +62,56 @@ public class Web {
         }
     }
 
-    public static InputStream getMod(Mod mod) throws IOException{
+    @SuppressWarnings("unchecked")
+    public static ReportingFuture<InputStream> getMod(Mod mod){
+        Progress progress = new Progress("Get mod: " + mod.getDependancyString(), 0, "Not started yet");
+        ReportingFuture<InputStream> output = new ReportingFuture<>(progress);
+        File local = new File("mods/" + mod.getDependancyString() + ".zip");
+        if (local.exists()) {
+            ForkJoinPool.commonPool().submit(() -> {
+                try{
+                    FileInputStream fis = new FileInputStream(local);
+                    try(ZipInputStream zis = new ZipInputStream(fis)){
+                        for(ZipEntry entry = zis.getNextEntry(); entry != null; entry = zis.getNextEntry()) {
+                        }
+                    }catch(IOException e){
+                        //Corrupt zip file, redownload
+                        logger.warning("Corrupt zip file for mod " + mod.getDependancyString());
+                        local.delete();
+                        progress.update("Corrupt zip file, redownloading");
+                        ReportingFuture<InputStream> download = (ReportingFuture<InputStream>) getMod(mod);
+                        progress.match(download.getProgress());
+                        download.thenAccept(output::complete);
+                    }finally{
+                        fis.close();
+                    }
+                    output.complete(new FileInputStream(local));
+                }catch(IOException e){
+                    output.completeExceptionally(e);
+                }
+            });
+        } else {
+            try{
+                URL url = new URL("https://gcdn.thunderstore.io/live/repository/packages/" + mod.getDependancyString() + ".zip");
+                logger.info("Fetching mod at: " + url.toString());
+                Download download = new Download(url);
+                ReportingFuture<File> future = new ReportingFuture<>(download.download(local), download.getProgress());
+                progress.match(future.getProgress());
+                future.thenAccept(file -> {
+                    try{
+                        output.complete(new FileInputStream(file));
+                    }catch(IOException e){
+                        output.completeExceptionally(e);
+                    }
+                });
+            }catch(Exception e){
+                output.completeExceptionally(e);
+            }
+        }
+        return output;
+    }
+
+    /*public static InputStream getMod(Mod mod) throws IOException{
         //https://gcdn.thunderstore.io/live/repository/packages/BepInEx-BepInExPack-5.4.2100.zip
         File local = new File("mods/" + mod.getDependancyString() + ".zip");
         if (local.exists()) {
@@ -98,7 +151,7 @@ public class Web {
                 return null;
             }
         }
-    }
+    }*/
 
     private static Installer modInstaller = new Installer(Logger.getLogger("mod installer"), Optional.of(new File("plugins")))
         .addLocationForDirectory("BepInEx","")

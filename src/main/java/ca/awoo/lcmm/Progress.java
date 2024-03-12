@@ -2,6 +2,7 @@ package ca.awoo.lcmm;
 
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
+import java.util.concurrent.Flow.Subscription;
 
 /**
  * Represents a progress update
@@ -109,6 +110,41 @@ public class Progress implements Publisher<Progress> {
         this.progress = progress;
         this.status = status;
         publisher.publish(this);
+    }
+
+    public void failWith(Throwable t){
+        this.status = Status.FAILED;
+        this.task = t.getMessage();
+        publisher.publish(this);
+    }
+
+    public void match(Progress other){
+        other.subscribe(new Subscriber<Progress>() {
+
+            @Override
+            public void onSubscribe(Subscription subscription) {
+                subscription.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(Progress item) {
+                setProgress(item.getProgress());
+                setTask(item.getTask());
+                setStatus(item.getStatus());
+                publish();
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                failWith(throwable);
+            }
+
+            @Override
+            public void onComplete() {
+                publish();
+            }
+            
+        });
     }
 
     public void publish(){
