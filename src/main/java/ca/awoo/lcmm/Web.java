@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -162,49 +163,23 @@ public class Web {
         .addLocationForLooseFiletype("cosmetics", "BepInEx/plugins/MoreCompanyCosmetics")
         .ignore(entry -> !entry.contains("/"));
 
-    public static void installMod(Mod mod, File lcRoot) throws IOException{
+    public static CompletableFuture<Void> installMod(Mod mod, File lcRoot) {
         logger.info("Installing mod: " + mod.getName());
-        try(ZipInputStream zis = new ZipInputStream(getMod(mod))){
-            modInstaller.install(zis, lcRoot);
-        }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        getMod(mod).thenAccept(is -> {
+            try(ZipInputStream zis = new ZipInputStream(is)){
+                modInstaller.install(zis, lcRoot);
+                future.complete(null);
+            }catch(IOException e){
+                logger.warning("Failed to install mod: " + mod.getName() + " due to: " + e);
+                future.completeExceptionally(e);
+            }
+        });
+        return future;
     }
 
-    public static void installProfile(String uuid, File lcRoot) throws IOException{
+    public static CompletableFuture<Void> installProfile(String uuid, File lcRoot) throws IOException{
         Profile profile = Profile.getProfile(uuid);
-        for (Mod mod : profile.getMods()) {
-            installMod(mod, lcRoot);
-        }
-        /*ZipInputStream zis = new ZipInputStream(getProfile(uuid));
-        File bepInExRoot = new File(lcRoot, "BepInEx");
-        bepInExRoot.mkdirs();
-        for (ZipEntry entry = zis.getNextEntry(); entry != null; entry = zis.getNextEntry()) {
-            if(entry.isDirectory()){
-                //Ignore directories
-                continue;
-            }
-            if(entry.getName().startsWith("BepInEx/")){
-                //File is relative to lcroot
-                File file = new File(lcRoot, entry.getName());
-                file.getParentFile().mkdirs();
-                Files.copy(zis, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            }else if(entry.getName().startsWith("config/")){
-                //File is relative to bepinex root
-                File file = new File(bepInExRoot, entry.getName());
-                file.getParentFile().mkdirs();
-                Files.copy(zis, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            }else if(entry.getName().equals("doorstop_config.ini")){
-                //File is relative to lcroot
-                File file = new File(lcRoot, entry.getName());
-                file.getParentFile().mkdirs();
-                Files.copy(zis, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            }else if(!entry.getName().contains("/")){
-                //Random raw file in root directory, ignore
-                logger.info("Ignoring loose file: " + entry.getName());
-            }else{
-                //File is unrecognized, but probably important!
-                //I don't even know where that would go, so lets ignore it I guess
-                logger.warning("Unrecognized file: " + entry.getName() + ", ignoring");
-            }
-        }*/
+        return CompletableFuture.allOf(Arrays.stream(profile.getMods()).map(mod -> installMod(mod, lcRoot)).toArray(CompletableFuture[]::new));
     }
 }
