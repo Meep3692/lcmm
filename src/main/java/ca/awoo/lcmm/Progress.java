@@ -1,5 +1,8 @@
 package ca.awoo.lcmm;
 
+import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.Flow.Subscriber;
+
 /**
  * Represents a progress update
  * <p>
@@ -11,10 +14,21 @@ package ca.awoo.lcmm;
  * The subtask describes a smaller step in the task to provide more feedback to the user.
  * </p>
  */
-public class Progress {
+public class Progress implements Publisher<Progress> {
+
+    public enum Status {
+        STARTING,
+        RUNNING,
+        FINISHED,
+        FAILED
+    }
+
     private final String name;
-    private final double progress;
-    private final String task;
+    private double progress;
+    private String task;
+    private Status status;
+
+    private final LatestPublisher<Progress> publisher = new LatestPublisher<>();
 
     /**
      * Create a new progress object
@@ -26,6 +40,7 @@ public class Progress {
         this.name = name;
         this.progress = progress;
         this.task = task;
+        this.status = Status.STARTING;
     }
 
     public String getName() {
@@ -36,7 +51,72 @@ public class Progress {
         return progress;
     }
 
+    public void setProgress(double progress) {
+        this.progress = progress;
+    }
+
     public String getTask() {
         return task;
+    }
+
+    public void setTask(String task) {
+        this.task = task;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
+    public void update(String task){
+        this.task = task;
+        publisher.publish(this);
+    }
+
+    public void update(double progress){
+        this.progress = progress;
+        publisher.publish(this);
+    }
+
+    public void update(Status status){
+        this.status = status;
+        publisher.publish(this);
+    }
+
+    public void update(String task, double progress){
+        this.task = task;
+        this.progress = progress;
+        publisher.publish(this);
+    }
+
+    public void update(String task, Status status){
+        this.task = task;
+        this.status = status;
+        publisher.publish(this);
+    }
+
+    public void update(double progress, Status status){
+        this.progress = progress;
+        this.status = status;
+        publisher.publish(this);
+    }
+
+    public void update(String task, double progress, Status status){
+        this.task = task;
+        this.progress = progress;
+        this.status = status;
+        publisher.publish(this);
+    }
+
+    public void publish(){
+        publisher.publish(this);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super Progress> subscriber) {
+        publisher.subscribe(subscriber);
     }
 }
