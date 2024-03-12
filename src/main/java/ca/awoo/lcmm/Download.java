@@ -6,8 +6,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.Future;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 
@@ -35,6 +33,7 @@ public class Download implements Publisher<Progress> {
                     long length = connection.getContentLengthLong();
                     long total = 0;
                     progress.update("Downloading");
+                    destination.getParentFile().mkdirs();
                     FileOutputStream localFile = new FileOutputStream(destination);
                     byte[] buffer = new byte[1024];
                     int bytesRead;

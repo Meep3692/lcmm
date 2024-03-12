@@ -9,12 +9,21 @@ public class MultiProgress extends Progress implements Subscriber<Progress> {
 
     private final List<Progress> progresses = new ArrayList<>();
 
-    public MultiProgress(String name, Progress... progresses){
+    public MultiProgress(String name){
         super(name, 0, "Starting");
+    }
+
+    public MultiProgress(String name, Progress... progresses){
+        this(name);
         for (Progress progress : progresses) {
             this.progresses.add(progress);
             progress.subscribe(this);
         }
+    }
+
+    public void addProgress(Progress progress){
+        progresses.add(progress);
+        progress.subscribe(this);
     }
 
     @Override

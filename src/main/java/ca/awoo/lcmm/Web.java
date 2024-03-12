@@ -11,11 +11,13 @@ import java.util.Base64;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.Flow.Subscriber;
-import java.util.concurrent.Flow.Subscription;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+
+import ca.awoo.lcmm.Installer.Location;
+import ca.awoo.lcmm.Progress.Status;
+
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
@@ -63,7 +65,6 @@ public class Web {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public static ReportingFuture<InputStream> getMod(Mod mod){
         Progress progress = new Progress("Get mod: " + mod.getDependancyString(), 0, "Not started yet");
         ReportingFuture<InputStream> output = new ReportingFuture<>(progress);
@@ -112,74 +113,47 @@ public class Web {
         return output;
     }
 
-    /*public static InputStream getMod(Mod mod) throws IOException{
-        //https://gcdn.thunderstore.io/live/repository/packages/BepInEx-BepInExPack-5.4.2100.zip
-        File local = new File("mods/" + mod.getDependancyString() + ".zip");
-        if (local.exists()) {
-            FileInputStream fis = new FileInputStream(local);
-            try(ZipInputStream zis = new ZipInputStream(fis)){
-                for(ZipEntry entry = zis.getNextEntry(); entry != null; entry = zis.getNextEntry()) {
-                }
-            }catch(IOException e){
-                //Corrupt zip file, redownload
-                logger.warning("Corrupt zip file for mod " + mod.getDependancyString());
-                local.delete();
-                return getMod(mod);
-            }finally{
-                fis.close();
-            }
-            return new FileInputStream(local);
-        }else{
-            URL url = new URL("https://gcdn.thunderstore.io/live/repository/packages/" + mod.getDependancyString() + ".zip");
-            logger.info("Fetching mod at: " + url.toString());
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.connect();
-            int responseCode = connection.getResponseCode();
-            if (responseCode == 200) {
-                logger.info("Mod found!");
-                //Thankfully, this endpoint just gives us the zip file directly
-                InputStream zip = connection.getInputStream();
-                //Save zip file to cache
-                logger.info("Saving zip file to cache");
-                local.getParentFile().mkdirs();
-                local.createNewFile();
-                Files.copy(zip, local.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                zip.close();
-                return new FileInputStream(local);
-            } else {
-                logger.info("Mod not found!");
-                return null;
-            }
-        }
-    }*/
+    static Logger installLogger = Logger.getLogger("mod installer");
+    static{
+        installLogger.setParent(App.logger);
+    }
 
-    private static Installer modInstaller = new Installer(Logger.getLogger("mod installer"), Optional.of(new File("plugins")))
+    private static Installer modInstaller = new Installer(installLogger, Optional.of(new File("BepInEx/plugins")))
         .addLocationForDirectory("BepInEx","")
         .addLocationForDirectory("plugins", "BepInEx")
         .addLocationForDirectory("config", "BepInEx")
         .addLocationForDirectory("patchers", "BepInEx")
         .addLocationForLooseFiletype("dll", "BepInEx/plugins")
         .addLocationForLooseFiletype("cosmetics", "BepInEx/plugins/MoreCompanyCosmetics")
+        .addLocation(new Location(s -> s.startsWith("BepInExPack/"), (entry, root) -> Optional.of(new File(root, entry.substring("BepInExPack/".length())))))
         .ignore(entry -> !entry.contains("/"));
 
-    public static CompletableFuture<Void> installMod(Mod mod, File lcRoot) {
+    public static ReportingFuture<Void> installMod(Mod mod, File lcRoot) {
         logger.info("Installing mod: " + mod.getName());
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        getMod(mod).thenAccept(is -> {
+        MultiProgress multiProgress = new MultiProgress("Installing mod " + mod.getDependancyString());
+        Progress installProgress = new Progress("Install", 0, "Waiting for mod");
+        ReportingFuture<Void> future = new ReportingFuture<>(multiProgress);
+        ReportingFuture<InputStream> getModFuture = getMod(mod);
+        multiProgress.addProgress(getModFuture.getProgress());
+        multiProgress.addProgress(installProgress);
+        getModFuture.thenAccept(is -> {
+            //TODO: actual progress on installing mods
+            installProgress.update("Copying files", Status.RUNNING);
             try(ZipInputStream zis = new ZipInputStream(is)){
                 modInstaller.install(zis, lcRoot);
+                installProgress.update("Files installed", 1.0, Status.FINISHED);
                 future.complete(null);
             }catch(IOException e){
                 logger.warning("Failed to install mod: " + mod.getName() + " due to: " + e);
+                installProgress.update(e.getMessage(), Status.FAILED);
                 future.completeExceptionally(e);
             }
         });
         return future;
     }
 
-    public static CompletableFuture<Void> installProfile(String uuid, File lcRoot) throws IOException{
+    public static ReportingFuture<Void> installProfile(String uuid, File lcRoot) throws IOException{
         Profile profile = Profile.getProfile(uuid);
-        return CompletableFuture.allOf(Arrays.stream(profile.getMods()).map(mod -> installMod(mod, lcRoot)).toArray(CompletableFuture[]::new));
+        return ReportingFuture.allOf("Install profile: " + profile.getName(), Arrays.stream(profile.getMods()).map(mod -> installMod(mod, lcRoot)).toArray(ReportingFuture[]::new));
     }
 }

@@ -6,3 +6,5 @@ mvnw.cmd
 profiles
 mods
 lcRoot
+output.txt
+output.txt.lck

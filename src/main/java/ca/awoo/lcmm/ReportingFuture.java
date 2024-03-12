@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 
@@ -35,6 +36,25 @@ public class ReportingFuture<T> implements Future<T>, CompletionStage<T>, Publis
         return new ReportingFuture<>(future, progress);
     }
 
+    public static ReportingFuture<Void> allOf(String name, ReportingFuture<?>... futures){
+        MultiProgress progress = new MultiProgress(name);
+        ReportingFuture<Void> result = new ReportingFuture<>(progress);
+        for(ReportingFuture<?> future : futures){
+            progress.addProgress(future.getProgress());
+        }
+        ForkJoinPool.commonPool().execute(()->{
+            for(ReportingFuture<?> future : futures){
+                try {
+                    future.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    result.completeExceptionally(e);
+                }
+            }
+            result.complete(null);
+        });
+        return result;
+    }
+
     public static <T> ReportingFuture<T> completed(T value) {
         return new ReportingFuture<>(CompletableFuture.completedFuture(value), new Progress("Completed", 1, "Finished"));
     }
@@ -47,6 +67,10 @@ public class ReportingFuture<T> implements Future<T>, CompletionStage<T>, Publis
     public void complete(T value) {
         progress.update("Finished", 1.0, Status.FINISHED);
         future.complete(value);
+    }
+
+    public void join(){
+        future.join();
     }
 
     @Override

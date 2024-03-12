@@ -2,6 +2,7 @@ package ca.awoo.lcmm;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.HashSet;
@@ -118,13 +119,25 @@ public class Installer {
     }
 
     public Installer addLocationForDirectory(String directory, String prefix){
-        addLocation(s -> s.startsWith(directory), prefix);
+        addLocation(s -> s.startsWith(directory + "/"), prefix);
         return this;
     }
 
     public Installer ignore(Predicate<String> predicate){
         addLocation(new Location(predicate, Locator.ignore()));
         return this;
+    }
+
+    private boolean installFile(String name, InputStream is, File location){
+        logger.info("Installing file: " + name + " to " + location);
+        try {
+            location.getParentFile().mkdirs();
+            Files.copy(is, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            return true;
+        } catch (IOException e) {
+            logger.warning("Failed to install file: " + name + " to " + location + " due to: " + e);
+            return false;
+        }
     }
 
     public void install(ZipInputStream zip, File root) throws IOException{
@@ -145,10 +158,10 @@ public class Installer {
                         installed = true;
                         break;
                     }
-                    File installFile = new File(root, installDir.get() + "/" + name);
-                    installFile.getParentFile().mkdirs();
-                    Files.copy(zip, installFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    installedFiles++;
+                    File installFile = installDir.get();
+                    if(installFile(name, zip, installFile)){
+                        installedFiles++;
+                    }
                     installed = true;
                     break;
                 }
@@ -157,11 +170,8 @@ public class Installer {
                 File installFile = new File(root, defaultInstallDir.get() + "/" + name);
                 installFile.getParentFile().mkdirs();
                 logger.warning("Installing file: " + name + " to " + installFile + " because no location was found");
-                try {
-                    Files.copy(zip, installFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                if(installFile(name, zip, installFile)){
                     installedFiles++;
-                } catch (Exception e) {
-                    logger.warning("Failed to install file: " + name + " to " + installFile + " due to: " + e);
                 }
             }
         }
