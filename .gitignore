@@ -1,0 +1,8 @@
+target
+.mvn
+.vscode
+mvnw
+mvnw.cmd
+profiles
+mods
+lcRoot
