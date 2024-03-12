@@ -95,7 +95,7 @@ public class Web {
                 URL url = new URL("https://gcdn.thunderstore.io/live/repository/packages/" + mod.getDependancyString() + ".zip");
                 logger.info("Fetching mod at: " + url.toString());
                 Download download = new Download(url);
-                ReportingFuture<File> future = new ReportingFuture<>(download.download(local), download.getProgress());
+                ReportingFuture<File> future = download.reportingDownload(local);
                 progress.match(future.getProgress());
                 future.thenAccept(file -> {
                     try{

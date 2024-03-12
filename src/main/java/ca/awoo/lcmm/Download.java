@@ -60,6 +60,11 @@ public class Download implements Publisher<Progress> {
         });
     }
 
+    public ReportingFuture<File> reportingDownload(File destination){
+        return new ReportingFuture<>(download(destination), progress);
+    
+    }
+
     public Progress getProgress() {
         return progress;
     }
