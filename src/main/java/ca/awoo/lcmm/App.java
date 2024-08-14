@@ -3,10 +3,12 @@ package ca.awoo.lcmm;
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.FileHandler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.swing.JFrame;
 
+import ca.awoo.lcmm.view.MultiProgressPanel;
 import ca.awoo.lcmm.view.ProgressPanel;
 
 public class App {
@@ -20,10 +22,20 @@ public class App {
         File lcRoot = new File("lcRoot");
         lcRoot.mkdirs();
         Web.installProfile(uuid, lcRoot).join();*/
+        Logger.getGlobal().addHandler(new FileHandler("global.xml"));
+        Logger.getGlobal().setLevel(Level.ALL);
         JFrame frame = new JFrame();
-        Progress progress = new Progress("Test Progress", 0.25, "Test task");
-        ProgressPanel pp = new ProgressPanel(progress);
-        frame.add(pp);
+        frame.setSize(400, 400);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        FileHandler fileHandler = new FileHandler("output.txt");
+        logger.addHandler(fileHandler);
+        String uuid = "01914da2-4153-65f9-63fb-b37fbc8030bd";
+        File lcRoot = new File("lcRoot");
+        lcRoot.mkdirs();
+        ReportingFuture<Void> rf = Web.installProfile(uuid, lcRoot);
+        MultiProgress mp = (MultiProgress)rf.getProgress();
+        MultiProgressPanel mpp = new MultiProgressPanel(mp);
+        frame.add(mpp);
         frame.setVisible(true);
     }
 }

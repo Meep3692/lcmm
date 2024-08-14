@@ -26,6 +26,10 @@ public class MultiProgress extends Progress implements Subscriber<Progress> {
         progress.subscribe(this);
     }
 
+    public List<Progress> getProgresses(){
+        return progresses;
+    }
+
     @Override
     public void onSubscribe(Subscription subscription) {
         subscription.request(Long.MAX_VALUE);
@@ -33,13 +37,20 @@ public class MultiProgress extends Progress implements Subscriber<Progress> {
 
     @Override
     public void onNext(Progress item) {
+        if(item.getStatus() == Status.RUNNING){
+            setStatus(Status.RUNNING);
+        }
         double total = 0;
+        boolean finished = true;
         for (Progress progress : progresses) {
             total += progress.getProgress();
+            if(!(progress.getStatus() == Status.FINISHED)){
+                finished = false;
+            }
         }
         total /= progresses.size();
         setProgress(total);
-        if(total == 1){
+        if(finished){
             setStatus(Status.FINISHED);
         }
         setTask(item.getName() + ": " + item.getTask());

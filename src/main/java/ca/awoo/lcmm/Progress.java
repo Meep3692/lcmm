@@ -1,5 +1,8 @@
 package ca.awoo.lcmm;
 
+import java.util.concurrent.SubmissionPublisher;
+import java.util.function.BiPredicate;
+import java.util.logging.Logger;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
@@ -29,7 +32,8 @@ public class Progress implements Publisher<Progress> {
     private String task;
     private Status status;
 
-    private final LatestPublisher<Progress> publisher = new LatestPublisher<>();
+    //private final LatestPublisher<Progress> publisher = new LatestPublisher<>();
+    private final SubmissionPublisher<Progress> publisher = new SubmissionPublisher<>();
 
     /**
      * Create a new progress object
@@ -74,48 +78,48 @@ public class Progress implements Publisher<Progress> {
 
     public void update(String task){
         this.task = task;
-        publisher.publish(this);
+        publish();
     }
 
     public void update(double progress){
         this.progress = progress;
-        publisher.publish(this);
+        publish();
     }
 
     public void update(Status status){
         this.status = status;
-        publisher.publish(this);
+        publish();
     }
 
     public void update(String task, double progress){
         this.task = task;
         this.progress = progress;
-        publisher.publish(this);
+        publish();
     }
 
     public void update(String task, Status status){
         this.task = task;
         this.status = status;
-        publisher.publish(this);
+        publish();
     }
 
     public void update(double progress, Status status){
         this.progress = progress;
         this.status = status;
-        publisher.publish(this);
+        publish();
     }
 
     public void update(String task, double progress, Status status){
         this.task = task;
         this.progress = progress;
         this.status = status;
-        publisher.publish(this);
+        publish();
     }
 
     public void failWith(Throwable t){
         this.status = Status.FAILED;
         this.task = t.getMessage();
-        publisher.publish(this);
+        publish();
     }
 
     public void match(Progress other){
@@ -148,7 +152,10 @@ public class Progress implements Publisher<Progress> {
     }
 
     public void publish(){
-        publisher.publish(this);
+        publisher.offer(this, (Subscriber<? super Progress> subscriber, Progress progress) -> {
+            Logger.getGlobal().warning("Dropping progress update: " + progress.getName() + " " + progress.getTask());
+            return true;
+        });
     }
 
     @Override

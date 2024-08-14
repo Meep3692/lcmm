@@ -1,14 +1,16 @@
-package ca.awoo.lcmm;
+package ca.awoo.lcmm.sync;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.ZipInputStream;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.yaml.snakeyaml.Yaml;
+
+import ca.awoo.lcmm.Version;
 
 public class Profile {
     private String name;
@@ -58,14 +60,7 @@ public class Profile {
         }
     }
 
-    public static Profile getProfile(String uuid) throws IOException {
-        try(ZipInputStream zip = new ZipInputStream(Web.getProfile(uuid))){
-            for (ZipEntry entry = zip.getNextEntry(); entry != null; entry = zip.getNextEntry()) {
-                if (entry.getName().equals("export.r2x")) {
-                    return Profile.deserialize(zip);
-                }
-            }
-            throw new FileNotFoundException("export.r2x not found in profile");
-        }
+    public static Profile getProfile(String uuid, Cache cache) throws IOException {
+        return getProfile(cache.getProfile(uuid));
     }
 }

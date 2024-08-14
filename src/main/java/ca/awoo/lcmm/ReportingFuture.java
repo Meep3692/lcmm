@@ -43,6 +43,7 @@ public class ReportingFuture<T> implements Future<T>, CompletionStage<T>, Publis
             progress.addProgress(future.getProgress());
         }
         ForkJoinPool.commonPool().execute(()->{
+            progress.update(Status.RUNNING);
             for(ReportingFuture<?> future : futures){
                 try {
                     future.get();

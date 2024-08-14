@@ -98,6 +98,18 @@ public class Installer {
         this.defaultInstallDir = defaultInstallDir;
     }
 
+    public static Installer lethalCompanyInstaller(Logger logger){
+        return new Installer(logger, Optional.of(new File("BepInEx/plugins")))                      //Unknown files go in root/BepInEx/plugins
+            .addLocationForDirectory("BepInEx","")                                          //Merge mod's BepInEx folder into the lc root
+            .addLocationForDirectory("plugins", "BepInEx")                                  //Merge mod's plugins folder into root/BepInEx
+            .addLocationForDirectory("config", "BepInEx")                                   //Merge mod's config folder into root/BepInEx
+            .addLocationForDirectory("patchers", "BepInEx")                                 //Merge mod's patchers folder into root/BepInEx
+            .addLocationForLooseFiletype("dll", "BepInEx/plugins")                           //Throw loose dll files into BepInEx/plugins
+            .addLocationForLooseFiletype("cosmetics", "BepInEx/plugins/MoreCompanyCosmetics")//Put cosmetic files in MoreCompanyCosmetics folder
+            .addLocation(new Location(s -> s.startsWith("BepInExPack/"), (entry, root) -> Optional.of(new File(root, entry.substring("BepInExPack/".length())))))//Used only for installing BepInExPack
+            .ignore(entry -> !entry.contains("/"));//Ignore loose files in root (README, manifest, icon, etc)
+    } 
+
     public Installer addLocation(Location location){
         locations.add(location);
         return this;
