@@ -56,6 +56,15 @@ public class Cache {
         return new FileInputStream(local);
     }
 
+    public InputStream[] getProfiles() throws IOException {
+        File[] files = profiles.listFiles();
+        InputStream[] streams = new InputStream[files.length];
+        for(int i = 0; i < files.length; i++){
+            streams[i] = new FileInputStream(files[i]);
+        }
+        return streams;
+    }
+
     public InputStream getMod(String dependancyString) throws IOException {
         File local = new File(mods, dependancyString + ".zip");
         if(!local.exists()){

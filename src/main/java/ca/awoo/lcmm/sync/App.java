@@ -54,6 +54,16 @@ public class App extends JFrame {
 
         add(profilesPanel, BorderLayout.CENTER);
 
+        try {
+            Profile[] profiles = Profile.getProfiles(cache);
+            for(Profile profile : profiles){
+                profilesPanel.addProfile(new ProfileWidget(profile));
+            }
+        } catch (IOException e1) {
+            JOptionPane.showMessageDialog(this, e1, "Failed to import profile", JOptionPane.ERROR_MESSAGE);
+        }
+
+
         //pack();
         setSize(600, 400);
     }

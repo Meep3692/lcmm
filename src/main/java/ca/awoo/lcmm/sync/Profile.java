@@ -63,4 +63,13 @@ public class Profile {
     public static Profile getProfile(String uuid, Cache cache) throws IOException {
         return getProfile(cache.getProfile(uuid));
     }
+
+    public static Profile[] getProfiles(Cache cache) throws IOException{
+        InputStream[] streams = cache.getProfiles();
+        Profile[] profiles = new Profile[streams.length];
+        for(int i = 0; i < streams.length; i++){
+            profiles[i] = getProfile(streams[i]);
+        }
+        return profiles;
+    }
 }
