@@ -8,14 +8,11 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import ca.awoo.lcmm.Installer.Location;
 import ca.awoo.lcmm.Progress.Status;
 
 import java.nio.file.Files;
@@ -118,15 +115,7 @@ public class Web {
         installLogger.setParent(App.logger);
     }
 
-    private static Installer modInstaller = new Installer(installLogger, Optional.of(new File("BepInEx/plugins")))
-        .addLocationForDirectory("BepInEx","")
-        .addLocationForDirectory("plugins", "BepInEx")
-        .addLocationForDirectory("config", "BepInEx")
-        .addLocationForDirectory("patchers", "BepInEx")
-        .addLocationForLooseFiletype("dll", "BepInEx/plugins")
-        .addLocationForLooseFiletype("cosmetics", "BepInEx/plugins/MoreCompanyCosmetics")
-        .addLocation(new Location(s -> s.startsWith("BepInExPack/"), (entry, root) -> Optional.of(new File(root, entry.substring("BepInExPack/".length())))))
-        .ignore(entry -> !entry.contains("/"));
+    static Installer modInstaller = Installer.lethalCompanyInstaller(installLogger);
 
     public static ReportingFuture<Void> installMod(Mod mod, File lcRoot) {
         logger.info("Installing mod: " + mod.getName());
@@ -154,6 +143,6 @@ public class Web {
 
     public static ReportingFuture<Void> installProfile(String uuid, File lcRoot) throws IOException{
         Profile profile = Profile.getProfile(uuid);
-        return ReportingFuture.allOf("Install profile: " + profile.getName(), Arrays.stream(profile.getMods()).map(mod -> installMod(mod, lcRoot)).toArray(ReportingFuture[]::new));
+        return ReportingFuture.allOf("Install profile: " + profile.getName(), Arrays.stream(profile.getMods()).filter(mod -> mod.isEnabled()).map(mod -> installMod(mod, lcRoot)).toArray(ReportingFuture[]::new));
     }
 }
