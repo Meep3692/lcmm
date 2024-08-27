@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
@@ -85,7 +85,7 @@ public class Installer {
         }
     }
     private final Logger logger;
-    private final Set<Location> locations = new HashSet<>();
+    private final List<Location> locations = new ArrayList<>();
     private final Optional<File> defaultInstallDir;
 
     /**
@@ -107,7 +107,11 @@ public class Installer {
             .addLocationForLooseFiletype("dll", "BepInEx/plugins")                           //Throw loose dll files into BepInEx/plugins
             .addLocationForLooseFiletype("cosmetics", "BepInEx/plugins/MoreCompanyCosmetics")//Put cosmetic files in MoreCompanyCosmetics folder
             .addLocation(new Location(s -> s.startsWith("BepInExPack/"), (entry, root) -> Optional.of(new File(root, entry.substring("BepInExPack/".length())))))//Used only for installing BepInExPack
-            .ignore(entry -> !entry.contains("/"));//Ignore loose files in root (README, manifest, icon, etc)
+            .ignore(entry -> entry.equals("icon.png"))//Ignore loose files in root (README, manifest, icon, etc)
+            .ignore(entry -> entry.equals("README.md"))//Ignore loose files in root (README, manifest, icon, etc)
+            .ignore(entry -> entry.equals("CHANGELOG.md"))//Ignore loose files in root (README, manifest, icon, etc)
+            .ignore(entry -> entry.equals("LICENSE"))//Ignore loose files in root (README, manifest, icon, etc)
+            .ignore(entry -> entry.equals("manifest.json"));//Ignore loose files in root (README, manifest, icon, etc)
     } 
 
     public Installer addLocation(Location location){
