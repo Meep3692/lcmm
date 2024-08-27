@@ -32,7 +32,6 @@ public class ProfileWidget extends JPanel{
             public void mousePressed(MouseEvent e) {
                 if(profilePane != null){
                     profilePane.select(ProfileWidget.this);
-                    System.out.println("Selected");
                 } else {
                     //profilePane should never be null in a scenario where we can be clicked
                     JOptionPane.showMessageDialog(ProfileWidget.this, "ProfileWidget " + ProfileWidget.this + " was clicked but somehow isn't part of a ProfilePane", "Error", JOptionPane.ERROR_MESSAGE);
@@ -80,5 +79,9 @@ public class ProfileWidget extends JPanel{
         this.selected = selected;
         label.setOpaque(selected);
         repaint();
+    }
+
+    public Profile getProfile(){
+        return profile;
     }
 }

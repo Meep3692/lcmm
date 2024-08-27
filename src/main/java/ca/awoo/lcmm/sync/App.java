@@ -63,6 +63,10 @@ public class App extends JFrame {
             JOptionPane.showMessageDialog(this, e1, "Failed to import profile", JOptionPane.ERROR_MESSAGE);
         }
 
+        ProfileActions actions = new ProfileActions();
+        add(actions, BorderLayout.EAST);
+
+        profilesPanel.listenProfileChange(actions);
 
         //pack();
         setSize(600, 400);
