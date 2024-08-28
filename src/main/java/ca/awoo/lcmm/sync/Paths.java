@@ -217,12 +217,14 @@ public class Paths {
         Stack<String> names = new Stack<>();
         String[] startParts = start.substring(absolute ? 1 : 0).split("/");
         for(String startPart : startParts){
-            names.push(startPart);
+            if(!startPart.isEmpty())
+                names.push(startPart);
         }
         for(String part : parts){
             String[] partParts = part.split("/");
             for(String partPart : partParts){
-                names.push(partPart);
+                if(!partPart.isEmpty())
+                    names.push(partPart);
             }
         }
         return new NormalPath(absolute, names.toArray(new String[0]));

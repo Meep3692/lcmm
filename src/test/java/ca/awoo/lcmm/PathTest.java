@@ -142,4 +142,11 @@ public class PathTest {
             assertEquals("String good", string, path.toString());
         }
     }
+
+    @Test
+    public void getTest(){
+        Path path1 = Paths.get("/foo");
+        Path path2 = Paths.get("/", "foo");
+        assertEquals("/foo", path1, path2);
+    }
 }
